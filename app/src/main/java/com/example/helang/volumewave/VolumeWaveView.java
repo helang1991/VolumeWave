@@ -53,8 +53,12 @@ public class VolumeWaveView extends View {
     public VolumeWaveView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs,defStyleAttr);
         initPaint();
+        startAnimation();
     }
 
+    /**
+     * 初始化画笔
+     */
     private void initPaint(){
         path = new Path();
 
@@ -140,21 +144,26 @@ public class VolumeWaveView extends View {
      * 画贝塞尔曲线
      * @param path
      * @param canvas
-     * @param x 横向起点的位置
+     * @param x 横向起点的位置(用于摆放曲线的左右的位置)
      * @param width 曲线的整个宽度
      * @param height 曲线的高度
      */
     private void drawCurve(Path path,Canvas canvas,Paint paint,int x,int width,int height){
         path.reset();
-        int divideWith = width/6;//因为一个弧形是由六部分组成的，所以这里就平均分一下
-        path.moveTo(x,HEIGHT);
-        path.quadTo(x+divideWith,HEIGHT-height,x+divideWith*2,HEIGHT-height*2);//B - C
+        /*因为这个弧形（类似一个山峰的形状）
+         * 其实就是三个贝塞尔曲线组成；
+         * 而每个贝塞尔曲线需要三个点，三个点连接起来也就是两部分构成；
+         * 所以，这三个贝塞尔曲线就是由六部分组成了（A，B，C，D，E，F，G），
+         * 所以这里就平均分一下，建议用笔在纸上画一下，就晓得了**/
+        int subWidth = width/6;//每小部分的宽度
+        path.moveTo(x,HEIGHT);//起点 A
+        path.quadTo(x+subWidth,HEIGHT-height,x+subWidth*2,HEIGHT-height*2);//B - C
 
-        path.lineTo(x+divideWith*2,HEIGHT-height*2);
-        path.quadTo(x+divideWith*3,HEIGHT-height*3,x+divideWith*4,HEIGHT-height*2);
+        path.lineTo(x+subWidth*2,HEIGHT-height*2);//C
+        path.quadTo(x+subWidth*3,HEIGHT-height*3,x+subWidth*4,HEIGHT-height*2);//D - E
 
-        path.lineTo(x+divideWith*4,HEIGHT-height*2);
-        path.quadTo(x+divideWith*5,HEIGHT-height,x+divideWith*6,HEIGHT);
+        path.lineTo(x+subWidth*4,HEIGHT-height*2);// E
+        path.quadTo(x+subWidth*5,HEIGHT-height,x+subWidth*6,HEIGHT);//F - G
 
         canvas.drawPath(path,paint);
     }
