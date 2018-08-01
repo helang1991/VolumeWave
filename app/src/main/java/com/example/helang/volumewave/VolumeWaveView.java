@@ -10,6 +10,9 @@ import android.graphics.Path;
 import android.graphics.Shader;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
@@ -21,19 +24,15 @@ import java.util.Random;
  */
 public class VolumeWaveView extends View {
     private static final String TAG = "VolumeWaveView";
-
-
     private static final int HEIGHT = 400;//整个控件的高度
 
-    private static final int HEIGHT1 = 200;//第一层曲线的高度
-    private static final int HEIGHT2 = 400;//第二层曲线的高度
-    private static final int HEIGHT3 = 350;//第三层曲线的高度
+    private static final int HEIGHT1 = 60;//第一层曲线的高度
+    private static final int HEIGHT2 = 40;//第二层曲线的高度
+    private static final int HEIGHT3 = 50;//第三层曲线的高度
 
-    private float h1 = 200,h2 = 200, h3 = 300,h4 = 300,h5 = 200;
+    private int h1 = 0,h2 = 0, h3 = 0,h4 = 0,h5 = 0;
 
     private int range = 0;//波动的幅度,你可以动态改变这个值，比如麦克风录入的音量的高低
-
-    private static final int splitWidth = -200;//扇形的交错距离
 
     private Path path;
     private Paint paint1,paint2,paint3,paint4;
@@ -54,8 +53,6 @@ public class VolumeWaveView extends View {
     public VolumeWaveView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs,defStyleAttr);
         initPaint();
-
-
     }
 
     private void initPaint(){
@@ -95,8 +92,6 @@ public class VolumeWaveView extends View {
                 Color.parseColor("#e6d5527e"), Color.parseColor("#e6bf52d5"), Shader.TileMode.MIRROR);
         paint4.setShader(linearGradient4);
 
-
-
     }
 
 
@@ -110,6 +105,7 @@ public class VolumeWaveView extends View {
         drawLayer3(canvas);
         drawLayer2(canvas);
         drawLayer1(canvas);
+
     }
 
     /**
@@ -117,13 +113,8 @@ public class VolumeWaveView extends View {
      * @param canvas
      */
     private void drawLayer1(Canvas canvas){
-        path.reset();//重置path
-        path.moveTo(0, HEIGHT);//起点
-        path.quadTo(getWidth()/4, HEIGHT-h1, getWidth()/2, HEIGHT);//第一条二阶贝塞尔曲线
-
-        path.moveTo(getWidth()/2+splitWidth,HEIGHT);
-        path.quadTo(getWidth()/2+splitWidth+getWidth()/4, HEIGHT-h2, getWidth(), HEIGHT);//第二条二阶贝塞尔曲线
-        canvas.drawPath(path,paint1);
+        drawCurve(path,canvas,paint1,getWidth()/5,getWidth()/3,h1);
+        drawCurve(path,canvas,paint1,getWidth()/3+getWidth()/5,getWidth()/3,h2);
     }
 
     /**
@@ -131,15 +122,8 @@ public class VolumeWaveView extends View {
      * @param canvas
      */
     private void drawLayer2(Canvas canvas){
-        path.reset();//重置path
-        path.moveTo(0, HEIGHT);//起点
-        path.quadTo(getWidth()/4, HEIGHT-h3, getWidth()/2, HEIGHT);//第一条二阶贝塞尔曲线
-        canvas.drawPath(path,paint2);
-
-        path.reset();
-        path.moveTo(getWidth()/2+splitWidth,HEIGHT);
-        path.quadTo(getWidth()/2+getWidth()/4, HEIGHT-h4, getWidth(), HEIGHT);//第二条二阶贝塞尔曲线
-        canvas.drawPath(path,paint4);
+        drawCurve(path,canvas,paint2,0,getWidth()/2,h3);
+        drawCurve(path,canvas,paint4,getWidth()/2-10,getWidth()/2,h4);
 
     }
 
@@ -148,15 +132,35 @@ public class VolumeWaveView extends View {
      * @param canvas
      */
     private void drawLayer3(Canvas canvas){
-        path.reset();//重置path
-        path.moveTo(200,HEIGHT);
-        path.quadTo(200+getWidth()/3, HEIGHT-h5, getWidth(), HEIGHT);//二阶贝塞尔曲线
-        canvas.drawPath(path,paint3);
+        drawCurve(path,canvas,paint3,getWidth()/4,getWidth()/2,h5);
     }
 
 
     /**
-     * 添加属性动画
+     * 画贝塞尔曲线
+     * @param path
+     * @param canvas
+     * @param x 横向起点的位置
+     * @param width 曲线的整个宽度
+     * @param height 曲线的高度
+     */
+    private void drawCurve(Path path,Canvas canvas,Paint paint,int x,int width,int height){
+        path.reset();
+        int divideWith = width/6;//因为一个弧形是由六部分组成的，所以这里就平均分一下
+        path.moveTo(x,HEIGHT);
+        path.quadTo(x+divideWith,HEIGHT-height,x+divideWith*2,HEIGHT-height*2);//B - C
+
+        path.lineTo(x+divideWith*2,HEIGHT-height*2);
+        path.quadTo(x+divideWith*3,HEIGHT-height*3,x+divideWith*4,HEIGHT-height*2);
+
+        path.lineTo(x+divideWith*4,HEIGHT-height*2);
+        path.quadTo(x+divideWith*5,HEIGHT-height,x+divideWith*6,HEIGHT);
+
+        canvas.drawPath(path,paint);
+    }
+
+    /**
+     * 添加属性动画,每一个动画的变化范围和周期都不一样，这样错开的效果才好看点
      */
     public void startAnimation() {
         Random random = new Random();
@@ -205,7 +209,7 @@ public class VolumeWaveView extends View {
 
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                h3 = (int) animation.getAnimatedValue() + range;
+                h3 = (int) animation.getAnimatedValue();
                 invalidate();
 
             }
@@ -230,8 +234,8 @@ public class VolumeWaveView extends View {
         animator4.start();
 
 
-        animator5 = ValueAnimator.ofInt(0,HEIGHT2,0);
-        animator5.setDuration(1250);
+        animator5 = ValueAnimator.ofInt(0,HEIGHT3,0);
+        animator5.setDuration(2000);
         animator5.setInterpolator(new DecelerateInterpolator());
         //无限循环
         animator5.setRepeatCount(ValueAnimator.INFINITE);
@@ -241,12 +245,10 @@ public class VolumeWaveView extends View {
             public void onAnimationUpdate(ValueAnimator animation) {
                 h5 = (int) animation.getAnimatedValue();
                 invalidate();
-
             }
         });
         animator5.start();
     }
-
 
     /**
      * 关闭动画
@@ -273,7 +275,5 @@ public class VolumeWaveView extends View {
             animator5 = null;
         }
     }
-
-
 
 }
